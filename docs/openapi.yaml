@@ -1,0 +1,476 @@
+openapi: 3.1.0
+info:
+  title: To-Do Agent Scheduler API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /tasks:
+    post:
+      summary: Create task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+    get:
+      summary: List tasks
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: due_before
+          schema: { type: string, format: date-time }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Task' }
+  /tasks/{taskId}:
+    patch:
+      summary: Update task
+      parameters:
+        - $ref: '#/components/parameters/taskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+  /tasks/{taskId}/subtasks:
+    post:
+      summary: Create subtask
+      parameters:
+        - $ref: '#/components/parameters/taskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubtaskRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subtask'
+  /subtasks/{subtaskId}:
+    patch:
+      summary: Update subtask
+      parameters:
+        - $ref: '#/components/parameters/subtaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSubtaskRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subtask'
+  /plans/generate:
+    post:
+      summary: Generate plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GeneratePlanRequest'
+      responses:
+        '200':
+          description: Generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneratePlanResponse'
+  /plans/active:
+    get:
+      summary: Get active plan by date
+      parameters:
+        - in: query
+          name: date
+          required: true
+          schema: { type: string, format: date }
+        - in: query
+          name: timezone
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+  /plans/{planId}/replan:
+    post:
+      summary: Replan
+      parameters:
+        - $ref: '#/components/parameters/planId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  enum: [calendar_change, missed_item, critical_task_added, manual]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+  /plan-items/{planItemId}:
+    patch:
+      summary: Move or lock plan item
+      parameters:
+        - $ref: '#/components/parameters/planItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePlanItemRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanItem'
+  /agent/actions/propose:
+    post:
+      summary: Propose an agent action
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProposeAgentActionRequest'
+      responses:
+        '201':
+          description: Proposed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentAction'
+  /agent/actions/{actionId}/decision:
+    post:
+      summary: Approve or reject agent action
+      parameters:
+        - $ref: '#/components/parameters/actionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision:
+                  type: string
+                  enum: [approve, reject]
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentAction'
+  /agent/actions/{actionId}/execute:
+    post:
+      summary: Execute a previously approved action
+      parameters:
+        - $ref: '#/components/parameters/actionId'
+      responses:
+        '200':
+          description: Executed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentAction'
+  /agent/actions:
+    get:
+      summary: List agent actions
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: from
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AgentAction' }
+  /policies:
+    post:
+      summary: Create permission policy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePolicyRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionPolicy'
+  /policies/{policyId}:
+    patch:
+      summary: Update permission policy
+      parameters:
+        - $ref: '#/components/parameters/policyId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePolicyRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionPolicy'
+  /policies/active:
+    get:
+      summary: Get active policy
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionPolicy'
+  /policies/{policyId}/activate:
+    post:
+      summary: Activate policy
+      parameters:
+        - $ref: '#/components/parameters/policyId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionPolicy'
+components:
+  parameters:
+    taskId: { in: path, name: taskId, required: true, schema: { type: string, format: uuid } }
+    subtaskId: { in: path, name: subtaskId, required: true, schema: { type: string, format: uuid } }
+    planId: { in: path, name: planId, required: true, schema: { type: string, format: uuid } }
+    planItemId: { in: path, name: planItemId, required: true, schema: { type: string, format: uuid } }
+    actionId: { in: path, name: actionId, required: true, schema: { type: string, format: uuid } }
+    policyId: { in: path, name: policyId, required: true, schema: { type: string, format: uuid } }
+  schemas:
+    Task:
+      type: object
+      required: [id, title, status, agent_mode, requires_approval]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        status: { type: string }
+        due_at: { type: string, format: date-time }
+        estimated_minutes: { type: integer }
+        impact_score: { type: integer }
+        urgency_score: { type: integer }
+        energy_required: { type: string }
+        agent_mode: { type: string, enum: [manual, assist, auto] }
+        requires_approval: { type: boolean }
+    Subtask:
+      type: object
+      required: [id, task_id, title, status]
+      properties:
+        id: { type: string, format: uuid }
+        task_id: { type: string, format: uuid }
+        title: { type: string }
+        status: { type: string }
+        estimated_minutes: { type: integer }
+    Plan:
+      type: object
+      required: [id, plan_date, horizon, timezone, status]
+      properties:
+        id: { type: string, format: uuid }
+        plan_date: { type: string, format: date }
+        horizon: { type: string, enum: [day, week] }
+        timezone: { type: string }
+        status: { type: string }
+    PlanItem:
+      type: object
+      required: [id, plan_id, item_type, start_at, end_at, status]
+      properties:
+        id: { type: string, format: uuid }
+        plan_id: { type: string, format: uuid }
+        item_type: { type: string }
+        task_id: { type: string, format: uuid }
+        subtask_id: { type: string, format: uuid }
+        start_at: { type: string, format: date-time }
+        end_at: { type: string, format: date-time }
+        locked: { type: boolean }
+        status: { type: string }
+    AgentAction:
+      type: object
+      required: [id, action_type, status, requires_approval]
+      properties:
+        id: { type: string, format: uuid }
+        action_type: { type: string }
+        target_type: { type: string }
+        target_id: { type: string, format: uuid }
+        input_payload: { type: object, additionalProperties: true }
+        proposed_payload: { type: object, additionalProperties: true }
+        executed_payload: { type: object, additionalProperties: true }
+        status: { type: string }
+        requires_approval: { type: boolean }
+    PermissionPolicy:
+      type: object
+      required: [id, name, is_active]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        allowed_tools:
+          type: array
+          items: { type: string }
+        allowed_action_types:
+          type: array
+          items: { type: string }
+        require_approval_for:
+          type: array
+          items: { type: string }
+        is_active: { type: boolean }
+    CreateTaskRequest:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string }
+        description: { type: string }
+        due_at: { type: string, format: date-time }
+        deadline_type: { type: string, enum: [hard, soft] }
+        estimated_minutes: { type: integer, minimum: 1 }
+        impact_score: { type: integer, minimum: 1, maximum: 5 }
+        urgency_score: { type: integer, minimum: 1, maximum: 5 }
+        energy_required: { type: string, enum: [low, medium, high] }
+        agent_mode: { type: string, enum: [manual, assist, auto], default: manual }
+        requires_approval: { type: boolean, default: true }
+    UpdateTaskRequest:
+      type: object
+      properties:
+        title: { type: string }
+        description: { type: string }
+        status: { type: string }
+        due_at: { type: string, format: date-time }
+        estimated_minutes: { type: integer, minimum: 1 }
+    CreateSubtaskRequest:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string }
+        estimated_minutes: { type: integer, minimum: 1 }
+    UpdateSubtaskRequest:
+      type: object
+      properties:
+        title: { type: string }
+        status: { type: string }
+        estimated_minutes: { type: integer, minimum: 1 }
+    GeneratePlanRequest:
+      type: object
+      required: [date, horizon, timezone]
+      properties:
+        date: { type: string, format: date }
+        horizon: { type: string, enum: [day, week] }
+        timezone: { type: string }
+        strategy: { type: string, enum: [balanced, focus, deadlines], default: balanced }
+        respect_existing_calendar: { type: boolean, default: true }
+    GeneratePlanResponse:
+      type: object
+      required: [plan, items, unscheduled]
+      properties:
+        plan: { $ref: '#/components/schemas/Plan' }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/PlanItem' }
+        unscheduled:
+          type: array
+          items:
+            type: object
+            properties:
+              task_id: { type: string, format: uuid }
+              reason: { type: string }
+    UpdatePlanItemRequest:
+      type: object
+      properties:
+        start_at: { type: string, format: date-time }
+        end_at: { type: string, format: date-time }
+        locked: { type: boolean }
+    ProposeAgentActionRequest:
+      type: object
+      required: [action_type]
+      properties:
+        action_type: { type: string }
+        target_type: { type: string }
+        target_id: { type: string, format: uuid }
+        proposed_payload: { type: object, additionalProperties: true }
+    CreatePolicyRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        allowed_tools: { type: array, items: { type: string } }
+        allowed_action_types: { type: array, items: { type: string } }
+        require_approval_for: { type: array, items: { type: string } }
+    UpdatePolicyRequest:
+      type: object
+      properties:
+        name: { type: string }
+        allowed_tools: { type: array, items: { type: string } }
+        allowed_action_types: { type: array, items: { type: string } }
+        require_approval_for: { type: array, items: { type: string } }
+        is_active: { type: boolean }
